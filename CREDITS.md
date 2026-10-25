@@ -11,3 +11,6 @@
 - Urban Shop by MintoDog (CC0) https://opengameart.org/content/urban-shop
 - Action Theme Song by Ogrebane (CC0) https://opengameart.org/content/action-theme-song
 - sPACE by ManofSteel (CC0) https://opengameart.org/content/space-5
+- Jump Landing Sound by MentalSanityOff (CC0) https://opengameart.org/content/jump-landing-sound
+- Radio Death Sound by Vinrax (CC0) https://opengameart.org/content/radio-death-sound
+- Water Splash and sand footsteps by Peludo (CC0) https://opengameart.org/content/water-splash-and-sand-footsteps

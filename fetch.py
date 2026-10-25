@@ -2,6 +2,16 @@ import os, re, time, html, urllib.request
 BASE = "https://opengameart.org"
 UA = {"User-Agent": "Mozilla/5.0 (VihangMusicBot)"}
 WANT = int(os.environ.get("COUNT") or "40")
+KIND = (os.environ.get("KIND") or "music").strip().lower()
+SFX = [
+    ("Whoosh", ["whoosh", "swoosh", "swish", "woosh", "wind", "swing", "transition"]),
+    ("Click", ["click", "button", "ui", "menu", "interface", "select", "beep", "blip", "notification"]),
+    ("Impact", ["hit", "punch", "impact", "thud", "slam", "explosion", "boom", "crash", "smash", "kick"]),
+    ("Funny", ["funny", "cartoon", "comedy", "silly", "boing", "laugh", "fart", "squeak"]),
+    ("Nature", ["rain", "water", "bird", "birds", "forest", "fire", "nature", "thunder", "ocean", "river"]),
+    ("Magic", ["magic", "spell", "sparkle", "power", "powerup", "fantasy", "heal", "shine"]),
+    ("Game", ["coin", "jump", "pickup", "collect", "levelup", "win", "lose", "game", "retro", "8-bit"]),
+]
 MOODS = [
     ("Sad", ["sad", "melancholy", "melancholic", "sorrow", "emotional", "tragic", "lonely", "piano"]),
     ("LoFi", ["ambient", "calm", "relax", "relaxing", "chill", "lofi", "lo-fi", "peaceful", "soft", "dreamy", "meditation"]),
@@ -26,13 +36,25 @@ def clean(s):
     return s[:40] or "Track"
 def mood_of(tags, title):
     words = (" ".join(tags) + " " + title).lower()
-    for mood, keys in MOODS:
+    for mood, keys in (SFX if KIND == "sfx" else MOODS):
         for k in keys:
             if re.search(r"\b" + re.escape(k) + r"\b", words):
                 return mood
-    return "Cinematic"
+    return "Misc" if KIND == "sfx" else "Cinematic"
+ROOT = "sfx" if KIND == "sfx" else "tracks"
+TID = "12"
+if KIND == "sfx":
+    TID = "13"
+    try:
+        form = text(BASE + "/art-search-advanced")
+        m = re.search(r'for="edit-field-art-type-tid-(\d+)"[^>]*>\s*Sound Effect', form)
+        if m:
+            TID = m.group(1)
+    except Exception:
+        pass
+print("kind", KIND, "type id", TID)
 have = set()
-for root, dirs, files in os.walk("tracks"):
+for root, dirs, files in os.walk(ROOT):
     for f in files:
         have.add(f.lower())
 credits = open("CREDITS.md", "a", encoding="utf-8")
@@ -41,7 +63,7 @@ seen = set()
 for pg in range(0, 40):
     if got >= WANT:
         break
-    url = BASE + "/art-search-advanced?field_art_type_tid%5B%5D=12&sort_by=count&sort_order=DESC&page=" + str(pg)
+    url = BASE + "/art-search-advanced?field_art_type_tid%5B%5D=" + TID + "&sort_by=count&sort_order=DESC&page=" + str(pg)
     try:
         listing = text(url)
     except Exception as e:
@@ -65,7 +87,7 @@ for pg in range(0, 40):
         lic = field(page, "field-art-licenses")
         if not re.search(r">\s*CC0\s*<", lic):
             continue
-        files = re.findall(r'(https://opengameart\.org/sites/default/files/[^"\s<>]+?\.(?:mp3|ogg))', page)
+        files = re.findall(r'(https://opengameart\.org/sites/default/files/[^"\s<>]+?\.(?:mp3|ogg|wav))', page)
         if not files:
             continue
         mp3 = [f for f in files if f.lower().endswith(".mp3")]
@@ -82,10 +104,12 @@ for pg in range(0, 40):
             data = get(furl)
         except Exception:
             continue
-        if len(data) < 30000 or len(data) > 12 * 1024 * 1024:
+        lo = 2000 if KIND == "sfx" else 30000
+        hi = 3 * 1024 * 1024 if KIND == "sfx" else 12 * 1024 * 1024
+        if len(data) < lo or len(data) > hi:
             continue
-        os.makedirs("tracks/" + mood, exist_ok=True)
-        with open("tracks/" + mood + "/" + name, "wb") as fo:
+        os.makedirs(ROOT + "/" + mood, exist_ok=True)
+        with open(ROOT + "/" + mood + "/" + name, "wb") as fo:
             fo.write(data)
         have.add(name.lower())
         am = re.search(r'field-name-author-submitter.*?<a[^>]*>([^<]+)</a>', page, re.S)
