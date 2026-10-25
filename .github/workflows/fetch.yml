@@ -1,0 +1,125 @@
+name: Fetch Free Music
+on:
+  workflow_dispatch:
+    inputs:
+      count:
+        description: "How many new songs"
+        default: "40"
+permissions:
+  contents: write
+jobs:
+  fetch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Download CC0 music from OpenGameArt
+        env:
+          COUNT: ${{ github.event.inputs.count }}
+        run: |
+          cat > fetch.py <<'PY'
+          import os, re, time, html, urllib.request
+          BASE = "https://opengameart.org"
+          UA = {"User-Agent": "Mozilla/5.0 (VihangMusicBot)"}
+          WANT = int(os.environ.get("COUNT") or "40")
+          MOODS = [
+              ("Sad", ["sad", "melancholy", "melancholic", "sorrow", "emotional", "tragic", "lonely", "piano"]),
+              ("LoFi", ["ambient", "calm", "relax", "relaxing", "chill", "lofi", "lo-fi", "peaceful", "soft", "dreamy", "meditation"]),
+              ("Happy", ["happy", "cheerful", "fun", "cute", "joyful", "positive", "comedy", "funny", "bright"]),
+              ("Upbeat", ["upbeat", "energetic", "electronic", "dance", "rock", "chiptune", "techno", "action", "fast", "8-bit", "8bit"]),
+              ("Cinematic", ["epic", "orchestral", "cinematic", "battle", "adventure", "heroic", "dramatic", "boss", "fantasy", "theme"]),
+          ]
+          def get(u):
+              req = urllib.request.Request(u, headers=UA)
+              return urllib.request.urlopen(req, timeout=60).read()
+          def text(u):
+              return get(u).decode("utf-8", "ignore")
+          def field(page, name):
+              i = page.find("field-name-" + name)
+              if i < 0:
+                  return ""
+              return page[i:i + 2500]
+          def clean(s):
+              s = html.unescape(re.sub(r"<[^>]+>", "", s)).strip()
+              s = re.sub(r"[^A-Za-z0-9 \-]+", "", s).strip()
+              s = re.sub(r"\s+", "_", s)
+              return s[:40] or "Track"
+          def mood_of(tags, title):
+              words = (" ".join(tags) + " " + title).lower()
+              for mood, keys in MOODS:
+                  for k in keys:
+                      if re.search(r"\b" + re.escape(k) + r"\b", words):
+                          return mood
+              return "Cinematic"
+          have = set()
+          for root, dirs, files in os.walk("tracks"):
+              for f in files:
+                  have.add(f.lower())
+          credits = open("CREDITS.md", "a", encoding="utf-8")
+          got = 0
+          seen = set()
+          for pg in range(0, 40):
+              if got >= WANT:
+                  break
+              url = BASE + "/art-search-advanced?field_art_type_tid%5B%5D=12&sort_by=count&sort_order=DESC&page=" + str(pg)
+              try:
+                  listing = text(url)
+              except Exception as e:
+                  print("list fail", e)
+                  break
+              links = []
+              for l in re.findall(r'href="(/content/[^"#?]+)"', listing):
+                  if l not in seen:
+                      seen.add(l)
+                      links.append(l)
+              if not links:
+                  break
+              for l in links:
+                  if got >= WANT:
+                      break
+                  time.sleep(1)
+                  try:
+                      page = text(BASE + l)
+                  except Exception:
+                      continue
+                  lic = field(page, "field-art-licenses")
+                  if not re.search(r">\s*CC0\s*<", lic):
+                      continue
+                  files = re.findall(r'(https://opengameart\.org/sites/default/files/[^"\s<>]+?\.(?:mp3|ogg))', page)
+                  if not files:
+                      continue
+                  mp3 = [f for f in files if f.lower().endswith(".mp3")]
+                  furl = (mp3 or files)[0]
+                  tm = re.search(r"<title>(.*?)\|", page, re.S)
+                  title = clean(tm.group(1) if tm else l.split("/")[-1])
+                  tags = [html.unescape(t).strip() for t in re.findall(r">([^<>]{2,30})</a>", field(page, "field-art-tags"))]
+                  mood = mood_of(tags, title)
+                  ext = furl.rsplit(".", 1)[1].lower()
+                  name = title + "." + ext
+                  if name.lower() in have:
+                      continue
+                  try:
+                      data = get(furl)
+                  except Exception:
+                      continue
+                  if len(data) < 30000 or len(data) > 12 * 1024 * 1024:
+                      continue
+                  os.makedirs("tracks/" + mood, exist_ok=True)
+                  with open("tracks/" + mood + "/" + name, "wb") as fo:
+                      fo.write(data)
+                  have.add(name.lower())
+                  am = re.search(r'field-name-author-submitter.*?<a[^>]*>([^<]+)</a>', page, re.S)
+                  author = html.unescape(am.group(1)).strip() if am else "Unknown"
+                  credits.write("- " + title.replace("_", " ") + " by " + author + " (CC0) " + BASE + l + "\n")
+                  got += 1
+                  print("added", mood, name, len(data))
+          credits.close()
+          print("total new:", got)
+          PY
+          python3 fetch.py
+      - name: Save to repo
+        run: |
+          git config user.name "Vihang Bot"
+          git config user.email "bot@vihang.app"
+          git add -A
+          git commit -m "Add CC0 music from OpenGameArt" || echo "nothing new"
+          git push
