@@ -1,0 +1,13 @@
+- Loading screen loop by HaelDB (CC0) https://opengameart.org/content/loading-screen-loop
+- Menu Music by mrpoly (CC0) https://opengameart.org/content/menu-music
+- Fast fight battle music by Ville Nousiainen / Xythe / mutkanto (CC0) https://opengameart.org/content/fast-fight-battle-music
+- Prepare your swords by bojidar-bg (CC0) https://opengameart.org/content/prepare-your-swords
+- Instrumental music3 by pauliuw (CC0) https://opengameart.org/content/instrumental-music3
+- Spooky Dungeon by You're Perfect Studio (CC0) https://opengameart.org/content/spooky-dungeon
+- Dark Shrine Loop by qubodup (CC0) https://opengameart.org/content/dark-shrine-loop
+- Eastern Arctic Dubstep by VishwaJai (CC0) https://opengameart.org/content/eastern-arctic-dubstep
+- Menu Loop by Akikazer (CC0) https://opengameart.org/content/menu-loop
+- Space Music by mrpoly (CC0) https://opengameart.org/content/space-music
+- Urban Shop by MintoDog (CC0) https://opengameart.org/content/urban-shop
+- Action Theme Song by Ogrebane (CC0) https://opengameart.org/content/action-theme-song
+- sPACE by ManofSteel (CC0) https://opengameart.org/content/space-5
